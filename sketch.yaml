@@ -8,6 +8,6 @@ profiles:
       - GxEPD (3.1.3)
       - dependency: "Adafruit GFX Library (1.12.6)"
       - dependency: "Adafruit BusIO (1.17.4)"
-      - dir: libraries/gifdecoder
+      - dir: libraries/gif-decoder
 
 default_profile: xiaoesp32c5

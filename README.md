@@ -15,6 +15,7 @@ TODO: 回路図
 ESP32であれば動くと思いますが、以下のボードで動作確認済みです(ピン配置はプリプロセッサで切り替えてください)
 
 - SeedStudio XIAO ESP32C3
+- SeedStudio XIAO ESP32C5
 - M5Stack ATOM
 - NodeMCU ESP-32S
 
@@ -26,6 +27,18 @@ ESP32であれば動くと思いますが、以下のボードで動作確認済
 
 - GDEW075Z08 800x480 White/Black/Red
 - https://www.amazon.co.jp/dp/B08H8R6TQG
+
+
+## Build with Arduino-CLI
+
+```bash
+cd esp32-epapeer
+cd libraries
+./setup_libs.sh
+cd ..
+arduino-cli compile --build-path ./build
+arduino-cli upload --port COM9
+```
 
 
 ## Build with Platform.IO
