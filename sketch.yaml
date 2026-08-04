@@ -1,0 +1,13 @@
+profiles:
+  xiaoesp32c5:
+    fqbn: esp32:esp32:XIAO_ESP32C5
+    platforms:
+      - platform: esp32:esp32 (3.3.11)
+        platform_index_url: https://espressif.github.io/arduino-esp32/package_esp32_index.json
+    libraries:
+      - GxEPD (3.1.3)
+      - dependency: "Adafruit GFX Library (1.12.6)"
+      - dependency: "Adafruit BusIO (1.17.4)"
+      - dir: libraries/gifdecoder
+
+default_profile: xiaoesp32c5

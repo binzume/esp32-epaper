@@ -12,10 +12,9 @@
 #include "matter_ble_server.h"
 #endif
 #define LOG Serial
-
 struct PixelWriter {
-  PixelWriter(GxEPD_Class *d) : display(d) {}
-  GxEPD_Class *display;
+  PixelWriter(GxEPD_Class* d) : display(d) {}
+  GxEPD_Class* display;
   int width, height, pos;
   void setSize(uint16_t w, uint16_t h) {
     width = w;
@@ -31,9 +30,9 @@ struct PixelWriter {
 };
 
 struct ByteReader {
-  WiFiClient *stream;
+  WiFiClient* stream;
   int size;
-  ByteReader(WiFiClient *s, int sz) : stream(s), size(sz) {}
+  ByteReader(WiFiClient* s, int sz) : stream(s), size(sz) {}
   bool eof() { return size <= 0; }
   uint8_t readByte() {
     int l;
@@ -50,7 +49,7 @@ struct ByteReader {
   }
 };
 
-void loadBitmap(GxEPD_Class *display, WiFiClient *stream, int size) {
+void loadBitmap(GxEPD_Class* display, WiFiClient* stream, int size) {
   int l, p = 0;
   int16_t x = 0, y = 0;
   while (((l = stream->available()) || stream->connected()) && p < size) {
@@ -81,7 +80,7 @@ void loadBitmap(GxEPD_Class *display, WiFiClient *stream, int size) {
   LOG.println(p);
 }
 
-void loadGif(GxEPD_Class *display, WiFiClient *stream, int size) {
+void loadGif(GxEPD_Class* display, WiFiClient* stream, int size) {
   ByteReader reader(stream, size);
   PixelWriter writer(display);
 
@@ -90,14 +89,14 @@ void loadGif(GxEPD_Class *display, WiFiClient *stream, int size) {
   delete decoder;
 }
 
-int loadImage(GxEPD_Class *display) {
-  HTTPClient *client = new HTTPClient();
+int loadImage(GxEPD_Class* display) {
+  HTTPClient* client = new HTTPClient();
   client->begin(IMG_URL);
-  const char *headerKeys[] = {"refresh"};
+  const char* headerKeys[] = {"refresh"};
   client->collectHeaders(headerKeys, 1);
   client->GET();
   long startTime = millis();
-  WiFiClient *stream = client->getStreamPtr();
+  WiFiClient* stream = client->getStreamPtr();
   int size = client->getSize();
   LOG.print("Size: ");
   LOG.println(size);
@@ -120,18 +119,11 @@ int loadImage(GxEPD_Class *display) {
   LOG.println("Updated");
 
   long elapsedTime = (int)((millis() - startTime) / 1000);
-  return refresh == 0 ? 3600 : constrain(refresh - elapsedTime, 300, 86400 + 3600);
+  return refresh == 0 ? 3600
+                      : constrain(refresh - elapsedTime, 300, 86400 + 3600);
 }
 
-void setup() {
-  Serial.begin(115200);
-
-#if ARDUINO_XIAO_ESP32C3
-  SPI.begin(3, -1, 2, 4);
-#elif ARDUINO_M5Stack_ATOM
-  SPI.begin(23, -1, 19, 5);
-#endif
-
+void connect() {
 #ifdef ENABLE_MATTER
   if (WiFi.begin() == WL_CONNECT_FAILED) {
     LOG.println("Starting Matter PASE");
@@ -145,13 +137,25 @@ void setup() {
     LOG.println();
   }
 #else
+  delay(5000);
+  Serial.printf("Connecting to %s ", SSID);
   // Wait for connection
-  if (WiFi.begin() == WL_CONNECT_FAILED) {
-    WiFi.begin(SSID, PASSWORD);
-  }
+  // wl_status_t wl_status = WiFi.begin();
+  // if (wl_status == WL_CONNECT_FAILED || wl_status == WL_DISCONNECTED) {
+  // WiFi.begin(SSID, PASSWORD);
+  //}
+  WiFi.begin(SSID, PASSWORD);
+  int count = 0;
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
     LOG.print(".");
+    if (++count > 100) {
+      LOG.println("timeout");
+      esp_sleep_enable_timer_wakeup(3600 * 3 * 1000000LL);
+      esp_deep_sleep_start();
+      delay(500);
+      return;
+    }
   }
   LOG.println();
 #endif
@@ -160,19 +164,37 @@ void setup() {
   LOG.println(SSID);
   LOG.print("IP address: ");
   LOG.println(WiFi.localIP());
+}
+
+void setup() {
+  Serial.begin(115200);
+
+#if ARDUINO_XIAO_ESP32C3
+  SPI.begin(3, -1, 2, 4);
+#elif ARDUINO_XIAO_ESP32C5
+  SPI.begin(0, -1, 1, 25);
+#elif ARDUINO_M5Stack_ATOM
+  SPI.begin(23, -1, 19, 5);
+#endif
 
 #if ARDUINO_XIAO_ESP32C3
   GxIO_Class io(SPI, /*CS=*/4, /*DC=*/5, /*RST=*/6);
-  GxEPD_Class *display = new GxEPD_Class(io, /*RST=*/6, /*BUSY=*/7);
+  GxEPD_Class* display = new GxEPD_Class(io, /*RST=*/6, /*BUSY=*/7);
+#elif ARDUINO_XIAO_ESP32C5
+  GxIO_Class io(SPI, /*CS=*/25, /*DC=*/7, /*RST=*/23);
+  GxEPD_Class* display = new GxEPD_Class(io, /*RST=*/23, /*BUSY=*/24);
 #elif ARDUINO_M5Stack_ATOM
   GxIO_Class io(SPI, /*CS=*/33, /*DC=*/21, /*RST=*/22);
-  GxEPD_Class *display = new GxEPD_Class(io, /*RST=*/22, /*BUSY=*/25);
+  GxEPD_Class* display = new GxEPD_Class(io, /*RST=*/22, /*BUSY=*/25);
 #else
   // NodeMCU ESP-32S
   GxIO_Class io(SPI, /*CS=5*/ SS, /*DC=*/17, /*RST=*/16);
-  GxEPD_Class *display = new GxEPD_Class(io, /*RST=*/16, /*BUSY=*/4);
+  GxEPD_Class* display = new GxEPD_Class(io, /*RST=*/16, /*BUSY=*/4);
 #endif
-  display->init();
+  display->init(115200);
+
+  connect();
+
   int t = loadImage(display);
 
   delete display;
